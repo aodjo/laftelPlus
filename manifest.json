@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Laftel Plus — 자동 다음화 & 오프닝/엔딩 스킵",
+  "version": "1.0.0",
+  "description": "Laftel Plus로 라프텔의 애니 시청 경험을 향상시키세요!",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "permissions": ["storage"],
+  "minimum_chrome_version": "111",
+  "content_scripts": [
+    {
+      "matches": ["https://laftel.net/*", "https://*.laftel.net/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://laftel.net/*", "https://*.laftel.net/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

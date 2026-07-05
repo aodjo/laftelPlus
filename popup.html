@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <img src="icons/icon32.png" alt="" width="22" height="22" />
+    <h1>Laftel Plus</h1>
+  </header>
+
+  <section class="power-area">
+    <button id="power" class="power" aria-pressed="true" title="전체 켜기 / 끄기">
+      <span class="power-ring"></span>
+      <svg class="power-icon" viewBox="0 0 24 24" width="40" height="40" aria-hidden="true">
+        <path d="M12 3.5v7" fill="none" stroke="currentColor" stroke-width="2.4"
+              stroke-linecap="round" />
+        <path d="M6.7 7.2a7 7 0 1 0 10.6 0" fill="none" stroke="currentColor"
+              stroke-width="2.4" stroke-linecap="round" />
+      </svg>
+    </button>
+    <p id="status" class="status">활성화됨</p>
+  </section>
+
+  <main>
+    <label class="row">
+      <div class="row-text">
+        <span class="row-title">오프닝 스킵</span>
+        <span class="row-desc">오프닝 스킵 버튼을 자동 클릭</span>
+      </div>
+      <input type="checkbox" id="skipOpening" class="toggle" />
+      <span class="switch" aria-hidden="true"></span>
+    </label>
+
+    <label class="row">
+      <div class="row-text">
+        <span class="row-title">엔딩 스킵</span>
+        <span class="row-desc">엔딩 스킵 버튼을 자동 클릭</span>
+      </div>
+      <input type="checkbox" id="skipEnding" class="toggle" />
+      <span class="switch" aria-hidden="true"></span>
+    </label>
+
+    <label class="row">
+      <div class="row-text">
+        <span class="row-title">정주행 모드</span>
+        <span class="row-desc">끝나면 다음 화 자동 재생</span>
+      </div>
+      <input type="checkbox" id="autoNext" class="toggle" />
+      <span class="switch" aria-hidden="true"></span>
+    </label>
+  </main>
+
+  <footer>
+    <span id="version"></span>
+    <span>Made with ❤️ by aodjo.</span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
