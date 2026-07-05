@@ -32,6 +32,18 @@
   const done = { opening: false, ending: false, next: false };
   let currentHref = location.href;
 
+  const FS_FLAG = "laftelPlusFS";
+  const FS_SELECTOR = "laftelPlusFSSel";
+  let wantFullscreen = false;
+  let fsSelector = null;
+
+  try {
+    if (sessionStorage.getItem(FS_FLAG) === "1") {
+      wantFullscreen = true;
+      fsSelector = sessionStorage.getItem(FS_SELECTOR);
+    }
+  } catch (e) {}
+
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data;
@@ -112,7 +124,71 @@
     return null;
   }
 
-  function maybeGoNext() {
+  function episodeIdPattern(id) {
+    return new RegExp("(^|[/=])" + id + "(?=[/?#]|$)");
+  }
+
+  function findNextEpisodeAnchor(nextId) {
+    const re = episodeIdPattern(nextId);
+    for (const a of document.querySelectorAll("a[href]")) {
+      if (re.test(a.getAttribute("href") || "")) return a;
+    }
+    return null;
+  }
+
+  function selectorFor(el) {
+    if (!el || el === document.documentElement || el === document.body) return null;
+    if (el.tagName === "VIDEO") return "VIDEO";
+    const classes =
+      typeof el.className === "string"
+        ? el.className.trim().split(/\s+/).filter(Boolean)
+        : [];
+    if (!classes.length) return null;
+    return el.tagName.toLowerCase() + "." + classes.map((c) => CSS.escape(c)).join(".");
+  }
+
+  function playerContainer(video) {
+    let el = video;
+    let best = video;
+    for (let i = 0; i < 6 && el.parentElement; i++) {
+      el = el.parentElement;
+      if (el === document.body) break;
+      if (el.clientWidth >= best.clientWidth && el.clientHeight >= best.clientHeight) {
+        best = el;
+      }
+    }
+    return best;
+  }
+
+  async function switchFullscreenTo(video) {
+    let target = null;
+    if (fsSelector === "VIDEO") target = video;
+    else if (fsSelector) target = document.querySelector(fsSelector);
+    if (!target) target = playerContainer(video);
+    if (!target) return;
+    try {
+      if (document.fullscreenElement !== target) await target.requestFullscreen();
+      console.debug("[Laftel Plus] fullscreen restored");
+    } catch (e) {
+      console.debug("[Laftel Plus] fullscreen restore blocked:", e && e.message);
+    }
+  }
+
+  function clearFsFlags() {
+    try {
+      sessionStorage.removeItem(FS_FLAG);
+      sessionStorage.removeItem(FS_SELECTOR);
+    } catch (e) {}
+  }
+
+  function handleFullscreenAfterNav(video) {
+    if (!wantFullscreen) return;
+    wantFullscreen = false;
+    clearFsFlags();
+    switchFullscreenTo(video);
+  }
+
+  async function maybeGoNext() {
     if (!settings.autoNext || done.next) return;
     const current = state.episodeId;
     const next = resolveNextEpisodeId();
@@ -120,14 +196,48 @@
       console.debug("[Laftel Plus] next episode unknown");
       return;
     }
-    const re = new RegExp("(^|[/=])" + current + "(?=[/?#]|$)");
+    const re = episodeIdPattern(current);
     if (!re.test(location.href)) {
       console.debug("[Laftel Plus] episode id not found in URL:", location.href);
       return;
     }
     done.next = true;
+    const targetUrl = location.href.replace(re, "$1" + next);
+    const before = location.href;
     console.debug("[Laftel Plus] moving to next episode:", next);
-    location.href = location.href.replace(re, "$1" + next);
+
+    // 전체화면 상태라면, 플레이어가 리마운트돼도 전체화면이 사라지지 않도록
+    // 먼저 documentElement로 전체화면을 옮겨둔다. (이미 전체화면일 때의 대상
+    // 요소 전환은 사용자 제스처 없이 허용됨) 새 화 로드 후 실제 플레이어로 되돌린다.
+    const fsEl = document.fullscreenElement;
+    if (fsEl) {
+      wantFullscreen = true;
+      fsSelector = selectorFor(fsEl);
+      try {
+        sessionStorage.setItem(FS_FLAG, "1");
+        if (fsSelector) sessionStorage.setItem(FS_SELECTOR, fsSelector);
+      } catch (e) {}
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (e) {
+        console.debug("[Laftel Plus] keep-fullscreen failed:", e && e.message);
+      }
+    }
+
+    // 1) 라프텔의 다음 화 링크를 클릭 → SPA 내부 이동(문서 유지)
+    const anchor = findNextEpisodeAnchor(next);
+    if (anchor) {
+      anchor.click();
+    } else {
+      // 2) 링크를 못 찾으면 History API로 라우터를 직접 트리거
+      history.pushState({}, "", targetUrl);
+      window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
+    }
+
+    // 3) 소프트 네비게이션이 안 먹히면 하드 리로드로 폴백(이동은 보장)
+    setTimeout(() => {
+      if (location.href === before) location.href = targetUrl;
+    }, 2500);
   }
 
   document.addEventListener(
@@ -183,6 +293,12 @@
       attachedVideo = video;
       video.addEventListener("timeupdate", () => checkSkips(video));
       video.addEventListener("ended", () => maybeGoNext());
+      handleFullscreenAfterNav(video);
+    } else if (
+      wantFullscreen &&
+      document.fullscreenElement === document.documentElement
+    ) {
+      handleFullscreenAfterNav(video);
     }
 
     checkSkips(video);
