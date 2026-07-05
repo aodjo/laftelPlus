@@ -44,12 +44,6 @@
       done.ending = false;
       done.next = false;
     }
-    console.log(
-      "[Laftel Plus] state:",
-      JSON.stringify(state.skips),
-      "ep:",
-      state.episodeId
-    );
   });
 
   window.postMessage({ type: "LAFTEL_PLUS_GET" }, "*");
@@ -78,7 +72,7 @@
       ) {
         done.opening = true;
         video.currentTime = openingEnd;
-        console.log("[Laftel Plus] opening skipped ->", openingEnd);
+        console.debug("[Laftel Plus] opening skipped ->", openingEnd);
       }
     }
 
@@ -94,7 +88,7 @@
       if (!done.ending && t >= endingStart && t < target - 1) {
         done.ending = true;
         video.currentTime = target;
-        console.log("[Laftel Plus] ending skipped ->", target);
+        console.debug("[Laftel Plus] ending skipped ->", target);
       }
     }
   }
@@ -123,16 +117,16 @@
     const current = state.episodeId;
     const next = resolveNextEpisodeId();
     if (current == null || next == null) {
-      console.log("[Laftel Plus] next episode unknown");
+      console.debug("[Laftel Plus] next episode unknown");
       return;
     }
     const re = new RegExp("(^|[/=])" + current + "(?=[/?#]|$)");
     if (!re.test(location.href)) {
-      console.log("[Laftel Plus] episode id not found in URL:", location.href);
+      console.debug("[Laftel Plus] episode id not found in URL:", location.href);
       return;
     }
     done.next = true;
-    console.log("[Laftel Plus] moving to next episode:", next);
+    console.debug("[Laftel Plus] moving to next episode:", next);
     location.href = location.href.replace(re, "$1" + next);
   }
 
@@ -172,10 +166,8 @@
   }
 
   let attachedVideo = null;
-  let ticks = 0;
 
   setInterval(() => {
-    ticks++;
     if (location.href !== currentHref) {
       currentHref = location.href;
       done.opening = false;
@@ -191,19 +183,9 @@
       attachedVideo = video;
       video.addEventListener("timeupdate", () => checkSkips(video));
       video.addEventListener("ended", () => maybeGoNext());
-      console.log("[Laftel Plus] video detected");
     }
 
     checkSkips(video);
     if (video.ended && video.duration > 0) maybeGoNext();
-
-    if (ticks % 5 === 0) {
-      console.log(
-        "[Laftel Plus] t=" + Math.round(video.currentTime) +
-          " dur=" + Math.round(video.duration || 0) +
-          " settings=" + JSON.stringify(settings) +
-          " done=" + JSON.stringify(done)
-      );
-    }
   }, 1000);
 })();
