@@ -66,9 +66,11 @@
     if (!video || !state.skips || !video.duration) return;
     const t = video.currentTime;
 
-    if (settings.skipOpening && !done.opening && hasMeta("opening")) {
+    if (settings.skipOpening && hasMeta("opening")) {
       const { openingStart, openingEnd } = state.skips;
+      if (t < openingStart - 1) done.opening = false;
       if (
+        !done.opening &&
         openingEnd > openingStart &&
         openingEnd <= video.duration &&
         t >= openingStart &&
@@ -80,15 +82,16 @@
       }
     }
 
-    if (settings.skipEnding && !done.ending && hasMeta("ending")) {
+    if (settings.skipEnding && hasMeta("ending")) {
       const { endingStart, endingEnd } = state.skips;
+      if (t < endingStart - 1) done.ending = false;
       const target =
         endingEnd != null &&
         endingEnd > endingStart &&
         endingEnd < video.duration - 1
           ? endingEnd
           : video.duration;
-      if (t >= endingStart && t < target - 1) {
+      if (!done.ending && t >= endingStart && t < target - 1) {
         done.ending = true;
         video.currentTime = target;
         console.log("[Laftel Plus] ending skipped ->", target);
